@@ -14,6 +14,7 @@ namespace CachetHQ\Cachet\Models;
 use AltThree\Validator\ValidatingTrait;
 use CachetHQ\Cachet\Models\Traits\SearchableTrait;
 use CachetHQ\Cachet\Models\Traits\SortableTrait;
+use CachetHQ\Cachet\Models\Traits\Taggable;
 use CachetHQ\Cachet\Presenters\ComponentPresenter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -22,7 +23,7 @@ use McCool\LaravelAutoPresenter\HasPresenter;
 
 class Component extends Model implements HasPresenter
 {
-    use SearchableTrait, SoftDeletes, SortableTrait, ValidatingTrait;
+    use SearchableTrait, SoftDeletes, SortableTrait, Taggable, ValidatingTrait;
 
     /**
      * List of attributes that have default values.
@@ -35,6 +36,7 @@ class Component extends Model implements HasPresenter
         'description' => '',
         'link'        => '',
         'enabled'     => true,
+        'meta'        => null,
     ];
 
     /**
@@ -50,6 +52,7 @@ class Component extends Model implements HasPresenter
         'link'        => 'string',
         'group_id'    => 'int',
         'enabled'     => 'bool',
+        'meta'        => 'json',
         'deleted_at'  => 'date',
     ];
 
@@ -62,11 +65,11 @@ class Component extends Model implements HasPresenter
         'name',
         'description',
         'status',
-        'tags',
         'link',
         'order',
         'group_id',
         'enabled',
+        'meta',
     ];
 
     /**
@@ -132,13 +135,13 @@ class Component extends Model implements HasPresenter
     }
 
     /**
-     * Get the tags relation.
+     * Get the meta relation.
      *
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     * @return \Illuminate\Database\Eloquent\Relations\MorphMany
      */
-    public function tags()
+    public function meta()
     {
-        return $this->belongsToMany(Tag::class);
+        return $this->morphMany(Meta::class, 'meta');
     }
 
     /**
@@ -180,6 +183,23 @@ class Component extends Model implements HasPresenter
     }
 
     /**
+     * Find all components which are within visible groups.
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param bool                                  $authenticated
+     *
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeAuthenticated(Builder $query, $authenticated)
+    {
+        return $query->when(!$authenticated, function (Builder $query) {
+            return $query->whereDoesntHave('group', function (Builder $query) {
+                $query->where('visible', ComponentGroup::VISIBLE_AUTHENTICATED);
+            });
+        });
+    }
+
+    /**
      * Finds all components which are disabled.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
@@ -218,20 +238,6 @@ class Component extends Model implements HasPresenter
         return $query->enabled()
             ->where('group_id', '>', 0)
             ->groupBy('group_id');
-    }
-
-    /**
-     * Returns all of the tags on this component.
-     *
-     * @return string
-     */
-    public function getTagsListAttribute()
-    {
-        $tags = $this->tags->map(function ($tag) {
-            return $tag->name;
-        });
-
-        return implode(', ', $tags->toArray());
     }
 
     /**

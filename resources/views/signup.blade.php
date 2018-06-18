@@ -1,5 +1,7 @@
 @extends('layout.master')
 
+@section('title', trans('cachet.signup.title').' | '.$site_title)
+
 @section('content')
 <div class="pull-right">
     <p><a class="btn btn-success btn-outline" href="{{ cachet_route('status-page') }}"><i class="ion ion-home"></i></a></p>
@@ -19,7 +21,7 @@
 </div>
 @endif
 
-@include('dashboard.partials.errors')
+@include('partials.errors')
 
 <div class="panel panel-meassage">
     <div class="panel-heading">
@@ -44,4 +46,8 @@
         </form>
     </div>
 </div>
+@stop
+
+@section('bottom-content')
+@include('partials.footer')
 @stop
